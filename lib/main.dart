@@ -7,6 +7,24 @@ void main() {
   runApp(const MyApp());
 }
 
+Map<String, bool> blacklistFlags = {
+  'nsfw': false,
+  'racist': false,
+  'sexist': false,
+  'religious': false,
+  'political': false,
+  'explicit': false,
+};
+
+Map<String, bool> paramList = {
+  'Programming': false,
+  'Miscellaneous': false,
+  'Dark': false,
+  'Pun': false,
+  'Spooky': false,
+  'Christmas': false,
+};
+
 class Jokes {
   String setup;
   String delivery;
@@ -18,25 +36,7 @@ class Jokes {
   }
 }
 
-Future<Jokes> giveValue() {
-  bool x = true;
-  return Future(() async {
-    final baseUrl = Uri.parse('https://v2.jokeapi.dev/joke/Any');
-    final filterUrl = baseUrl.replace(queryParameters: {
-      'blacklistFlags': [if (x) 'nsfw', 'racist', 'other'].join(','),
-    });
-
-    print(filterUrl.toString());
-
-    final response = await http.get(baseUrl);
-
-    if (response.statusCode == 200) {
-      return Jokes.fromJson(jsonDecode(response.body));
-    } else {
-      throw Exception('error');
-    }
-  });
-}
+String params = 'Any';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -47,8 +47,54 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool tellJoke = true;
+
   @override
   Widget build(BuildContext context) {
+    Future<Jokes> giveValue() {
+      return Future(
+        () async {
+          dynamic filterUrl = 'https://v2.jokeapi.dev/joke/$params';
+
+          final blackList = [
+            if (blacklistFlags['nsfw'] == true) 'nsfw',
+            if (blacklistFlags['racist'] == true) 'racist',
+            if (blacklistFlags['sexist'] == true) 'sexist',
+            if (blacklistFlags['religious'] == true) 'religious',
+            if (blacklistFlags['political'] == true) 'political',
+            if (blacklistFlags['explicit'] == true) 'explicit'
+          ];
+
+          final addParams = [
+            if (paramList['Programming'] == true) 'Programming',
+            if (paramList['Miscellaneous'] == true) 'Miscellaneous',
+            if (paramList['Dark'] == true) 'Dark',
+            if (paramList['Pun'] == true) 'Pun',
+            if (paramList['Spooky'] == true) 'Spooky',
+            if (paramList['Christmas'] == true) 'Christmas',
+          ];
+
+          if (addParams.isNotEmpty) {
+            params = addParams.join(',');
+            filterUrl = 'https://v2.jokeapi.dev/joke/$params';
+          }
+
+          if (blackList.isNotEmpty) {
+            filterUrl = Uri.parse(filterUrl).replace(queryParameters: {
+              'blacklistFlags': blackList.join(','),
+            }).toString();
+          }
+
+          final response = await http.get(Uri.parse(filterUrl));
+
+          if (response.statusCode == 200) {
+            return Jokes.fromJson(jsonDecode(response.body));
+          } else {
+            throw Exception('error');
+          }
+        },
+      );
+    }
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -88,44 +134,60 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8.0,
+                vertical: 30,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                // mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   if (tellJoke)
                     FutureBuilder(
                       future: giveValue(),
                       builder: (context, snapshot) {
                         if (snapshot.hasData) {
-                          return Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(
-                                  snapshot.data!.setup,
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(
-                                  height: 20,
-                                ),
-                                Text(
-                                  snapshot.data!.delivery,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.all(15.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    snapshot.data!.setup,
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(
+                                    height: 20,
+                                  ),
+                                  Text(
+                                    snapshot.data!.delivery,
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         } else if (snapshot.hasError) {
-                          return const Text('Bad Request ☹.. Hit Again');
+                          return const Expanded(
+                            // height: 300,
+                            child: Center(
+                                child: Text('Bad Request ☹.. Hit Again')),
+                          );
                         } else {
                           return const CircularProgressIndicator();
                         }
                       },
                     ),
+                  const SizedBox(
+                    height: 20,
+                  ),
                   ElevatedButton(
                     onPressed: () {
                       setState(() {
@@ -134,10 +196,11 @@ class _MyAppState extends State<MyApp> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
+                      animationDuration: const Duration(seconds: 1),
                     ),
                     child: const Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: 10.0,
+                        horizontal: 15.0,
                         vertical: 8,
                       ),
                       child: Text(
@@ -147,6 +210,76 @@ class _MyAppState extends State<MyApp> {
                         ),
                       ),
                     ),
+                  ),
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children: blacklistFlags.entries.map(
+                      (entry) {
+                        final key = entry.key;
+                        final value = entry.value;
+
+                        return ElevatedButton(
+                          onPressed: () {
+                            setState(
+                              () {
+                                if (blacklistFlags[key] == true) {
+                                  blacklistFlags[key] = false;
+                                } else {
+                                  blacklistFlags[key] = true;
+                                }
+
+                                tellJoke = true;
+                              },
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: value
+                                ? const Color.fromARGB(255, 92, 91, 91)
+                                : Colors.redAccent,
+                          ),
+                          child: Text(key),
+                        );
+                      },
+                    ).toList(),
+                  ),
+                  const SizedBox(
+                    height: 20,
+                  ),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children: paramList.entries.map(
+                      (entry) {
+                        final key = entry.key;
+                        final value = entry.value;
+
+                        return ElevatedButton(
+                          onPressed: () {
+                            setState(
+                              () {
+                                if (paramList[key] == true) {
+                                  paramList[key] = false;
+                                } else {
+                                  paramList[key] = true;
+                                }
+
+                                tellJoke = true;
+                              },
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: value
+                                ? const Color.fromARGB(255, 92, 91, 91)
+                                : Colors.green,
+                          ),
+                          child: Text(key),
+                        );
+                      },
+                    ).toList(),
                   ),
                 ],
               ),
